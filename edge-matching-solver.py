@@ -35,12 +35,6 @@ colored = LpVariable.dicts("Color", (ID, SIDE, COLORS), cat="Binary")
 
 tiles = LpVariable.dicts("Tile", (x, y, ID), cat="Binary")
 
-print(tiles[0][0][1])
-
-for i in x:
-    for j in y:
-        print(tiles[i][j])
-
 # 1. Each tile appears once.
 for k in ID:
     prob += lpSum(tiles[i][j][k] for i in x for j in y) == 1
@@ -50,14 +44,34 @@ for i in x:
     for j in y:
         prob += lpSum(tiles[i][j][k] for k in ID) == 1
 
+# There is only one color for each side
+for i in ID:
+    for j in SIDE:
+        prob += lpSum(colored[i][j][k] for k in COLORS) == 1
+
 # TODO 3. Colors between shared side of adjacent tiles must be the same.
+for i in ID:
+    prob += lpSum(tiles[i][j][k] for i in x for j in y) - lpSum(colored[i][j][k] for j in SIDE for k in COLORS) == -4
 
 # Solving the problem
 prob.solve()
 
-# Printing the solution
+# The problem data is written to an .lp file
+prob.writeLP("edgeMatchingPuzzle.lp")
+
+# The problem is solved using PuLP's choice of Solver
+prob.solve()
+
+# The status of the solution is printed to the screen
+print("Status:", LpStatus[prob.status])
+
 for i in x:
     for j in y:
         for k in ID:
             if value(tiles[i][j][k]) == 1:
-                print("Tile at ({},{}) with ID {}".format(i, j, k))
+                print("| (", i, ", ", j, ") ", end="|")
+                for l in SIDE:
+                    for m in COLORS:
+                        if value(colored[k][l][m]) == 1:
+                            print(" side:", l, "color:", m, end=" |")
+                print()
